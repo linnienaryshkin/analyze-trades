@@ -13,13 +13,19 @@ export class ExcessiveCancellationsChecker {
 
   /**
    * Returns the list of companies that are involved in excessive cancelling.
-   * If, in any given 60 second period and for a given company,
-   * the ratio of the cumulative quantity of cancels to cumulative quantity of orders is greater than `1/3`
-   * then the company is engaged in excessive cancelling.
    * @returns {Promise<Array<string>>}
    */
   async companiesInvolvedInExcessiveCancellations() {
+    /**
+     * We use Set to store the companies that are considered to be excessively cancelling
+     * Excessive Cancelling - if the company cancels more than 1/3 of the total transaction quantity
+     * Transaction - a combination of company's orders within 60 seconds
+     */
     const excessiveCancellingCompanies = new Set();
+
+    /**
+     * We use Map to store the companies' transactions
+     */
     const companiesTransaction = new Map();
 
     const stream = createReadStream(this.filePath, { encoding: "utf-8" });
@@ -31,57 +37,77 @@ export class ExcessiveCancellationsChecker {
         continue;
       }
 
+      /**
+       * If the company is already considered to be excessively cancelling,
+       * we skip that company from further analyzing
+       */
       if (excessiveCancellingCompanies.has(order.company)) {
         continue;
       }
 
+      /**
+       * If there is no transaction for the company already in consideration,
+       * we create a new transaction with the current order details
+       */
       if (!companiesTransaction.has(order.company)) {
-        const transaction = {
-          timestamp: order.date.getTime(),
-          total: order.quantity,
-          cancelled: order.orderType === "F" ? order.quantity : 0,
-        };
-        companiesTransaction.set(order.company, transaction);
-      } else {
-        const transaction = companiesTransaction.get(order.company);
-
-        /**
-         * If the order is within 60 seconds of the current transaction,
-         * we update the transaction object with the new order details
-         */
-        if (order.date.getTime() - transaction.timestamp < 60000) {
-          const accumulatedTransaction = {
-            timestamp: transaction.timestamp,
-            total: transaction.total + order.quantity,
-            cancelled:
-              order.orderType === "F"
-                ? transaction.cancelled + order.quantity
-                : transaction.cancelled,
-          };
-          companiesTransaction.set(order.company, accumulatedTransaction);
-          continue;
-        }
-
-        /**
-         * If the transaction is cancelled more than 1/3 of the total quantity,
-         * that company is considered to be excessively cancelling.
-         * And not involved in any further analyzing
-         */
-        if (transaction.cancelled / transaction.total > 1 / 3) {
-          companiesTransaction.delete(order.company);
-          excessiveCancellingCompanies.add(order.company);
-          continue;
-        }
-
         const newTransaction = {
           timestamp: order.date.getTime(),
           total: order.quantity,
           cancelled: order.orderType === "F" ? order.quantity : 0,
         };
         companiesTransaction.set(order.company, newTransaction);
+        continue;
       }
+
+      const transaction = companiesTransaction.get(order.company);
+
+      /**
+       * If the order is within 60 seconds of the current transaction,
+       * we accumulate the transaction quantity with the new order details.
+       *
+       * Transaction is considered Completed if the order is more than 60 seconds.
+       * Such transactions are passed to the next step of analyzing.
+       */
+      if (order.date.getTime() - transaction.timestamp < 60000) {
+        const accumulatedTransaction = {
+          timestamp: transaction.timestamp,
+          total: transaction.total + order.quantity,
+          cancelled:
+            order.orderType === "F"
+              ? transaction.cancelled + order.quantity
+              : transaction.cancelled,
+        };
+        companiesTransaction.set(order.company, accumulatedTransaction);
+        continue;
+      }
+
+      /**
+       * If the transaction is cancelled more than 1/3 of the total quantity,
+       * that company is considered to be excessively cancelling.
+       * And not involved in any further analyzing
+       */
+      if (transaction.cancelled / transaction.total > 1 / 3) {
+        companiesTransaction.delete(order.company);
+        excessiveCancellingCompanies.add(order.company);
+        continue;
+      }
+
+      /**
+       * If company haven't excessively cancelled, we continue analyzing it with the next transaction
+       */
+      const newTransaction = {
+        timestamp: order.date.getTime(),
+        total: order.quantity,
+        cancelled: order.orderType === "F" ? order.quantity : 0,
+      };
+      companiesTransaction.set(order.company, newTransaction);
     }
 
+    /**
+     * Left transactions (which haven't got additional orders within 60 seconds)
+     * are considered to be the Completed transaction.
+     * We analyze them separably
+     */
     for (const [company, transaction] of companiesTransaction) {
       if (transaction.cancelled / transaction.total > 1 / 3) {
         excessiveCancellingCompanies.add(company);
@@ -97,6 +123,8 @@ export class ExcessiveCancellationsChecker {
    */
   async totalNumberOfWellBehavedCompanies() {
     const nonExcessiveCancellingCompaniesCount = 0;
+
+    // TODO: Separate analyze method, which will be reused in both companiesInvolvedInExcessiveCancellations and totalNumberOfWellBehavedCompanies
 
     return nonExcessiveCancellingCompaniesCount;
   }
