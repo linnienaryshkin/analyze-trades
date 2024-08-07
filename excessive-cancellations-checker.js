@@ -1,6 +1,7 @@
 import { createReadStream } from "node:fs";
 import * as readline from "node:readline/promises";
 
+// TODO: Such classes not make sense much, filePath could be used easily used as an argument. FP gives a better bundling of the code.
 export class ExcessiveCancellationsChecker {
   /**
    * We provide a path to a file when initiating the class
@@ -34,10 +35,11 @@ export class ExcessiveCancellationsChecker {
   }
 
   /**
-   *
-   * @returns {{excessiveCancellingCompanies: Set<string>, companiesList: Set<string>}}
+   * TODO: This method is already quite long and could be split into smaller methods
+   * @returns {Promise<{excessiveCancellingCompanies: Set<string>, companiesList: Set<string>}>}
    */
   async analyzeCsv() {
+    // TODO: Depending on the data amount, the RAM could be not enough to store all the companies, so we could use a external storage to store the companies and their transactions
     const companiesList = new Set();
     /**
      * We use Set to store the companies that are considered to be excessively cancelling
@@ -75,6 +77,7 @@ export class ExcessiveCancellationsChecker {
        * we create a new transaction with the current order details
        */
       if (!companiesTransaction.has(order.company)) {
+        // TODO: Consider defining a methods to work with the transactions (creating, accumulating)
         const newTransaction = {
           timestamp: order.date.getTime(),
           total: order.quantity,
@@ -110,6 +113,8 @@ export class ExcessiveCancellationsChecker {
        * If the transaction is cancelled more than 1/3 of the total quantity,
        * that company is considered to be excessively cancelling.
        * And not involved in any further analyzing
+       *
+       * TODO: Consider defining a method to analyze Completed transactions
        */
       if (transaction.cancelled / transaction.total > 1 / 3) {
         companiesTransaction.delete(order.company);
@@ -132,6 +137,8 @@ export class ExcessiveCancellationsChecker {
      * Left transactions (which haven't got additional orders within 60 seconds)
      * are considered to be the Completed transaction.
      * We analyze them separably
+     *
+     * TODO: Consider defining a method to analyze left transactions, or maybe somehow reshape the data structure, collect ALL transactions and then analyze separably (not inside the stream loop)
      */
     for (const [company, transaction] of companiesTransaction) {
       if (transaction.cancelled / transaction.total > 1 / 3) {
@@ -150,6 +157,7 @@ export class ExcessiveCancellationsChecker {
    * @returns {{date: Date, company: string, orderType: "D" | "F", quantity: number} | null}
    */
   mapAndValidateOrder(lines) {
+    // TODO: It's always better to use a library to map and validate the data, like Zod or Joi
     const order = {
       date: new Date(lines[0]),
       company: String(lines[1]),
