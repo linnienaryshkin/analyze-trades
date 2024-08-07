@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import * as readline from "node:readline/promises";
 
 export class ExcessiveCancellationsChecker {
   /**
@@ -19,28 +20,72 @@ export class ExcessiveCancellationsChecker {
    */
   async companiesInvolvedInExcessiveCancellations() {
     const excessiveCancellingCompanies = new Set();
+    const companiesTransaction = new Map();
 
-    const companiesTransactions = new Map();
+    const stream = createReadStream(this.filePath, { encoding: "utf-8" });
+    const readLineGenerator = readline.createInterface(stream);
 
-    const readStream = createReadStream(this.filePath);
-
-    for await (const chunk of readStream) {
-      const lines = chunk.toString().split(",");
-
-      const order = this.mapAndValidateOrder(lines);
+    for await (const line of readLineGenerator) {
+      const order = this.mapAndValidateOrder(line.split(","));
       if (order === null) {
         continue;
       }
 
-      // TODO: Define an order transaction object - { company: string, timestamp: number, total: number, cancelled: number }
+      if (excessiveCancellingCompanies.has(order.company)) {
+        continue;
+      }
 
-      // TODO: Handle transactions on timestamp passed 60 seconds
+      if (!companiesTransaction.has(order.company)) {
+        const transaction = {
+          timestamp: order.date.getTime(),
+          total: order.quantity,
+          cancelled: order.orderType === "F" ? order.quantity : 0,
+        };
+        companiesTransaction.set(order.company, transaction);
+      } else {
+        const transaction = companiesTransaction.get(order.company);
 
-      // TODO: Handle every transaction left transaction after end of file, via separate for loop
+        /**
+         * If the order is within 60 seconds of the current transaction,
+         * we update the transaction object with the new order details
+         */
+        if (order.date.getTime() - transaction.timestamp < 60000) {
+          const accumulatedTransaction = {
+            timestamp: transaction.timestamp,
+            total: transaction.total + order.quantity,
+            cancelled:
+              order.orderType === "F"
+                ? transaction.cancelled + order.quantity
+                : transaction.cancelled,
+          };
+          companiesTransaction.set(order.company, accumulatedTransaction);
+          continue;
+        }
 
-      // TODO: Ignore companies that is already in the excessiveCancellingCompanies set
+        /**
+         * If the transaction is cancelled more than 1/3 of the total quantity,
+         * that company is considered to be excessively cancelling.
+         * And not involved in any further analyzing
+         */
+        if (transaction.cancelled / transaction.total > 1 / 3) {
+          companiesTransaction.delete(order.company);
+          excessiveCancellingCompanies.add(order.company);
+          continue;
+        }
 
-      console.log(order);
+        const newTransaction = {
+          timestamp: order.date.getTime(),
+          total: order.quantity,
+          cancelled: order.orderType === "F" ? order.quantity : 0,
+        };
+        companiesTransaction.set(order.company, newTransaction);
+      }
+    }
+
+    for (const [company, transaction] of companiesTransaction) {
+      if (transaction.cancelled / transaction.total > 1 / 3) {
+        excessiveCancellingCompanies.add(company);
+      }
     }
 
     return Array.from(excessiveCancellingCompanies);
@@ -58,25 +103,29 @@ export class ExcessiveCancellationsChecker {
 
   /**
    * @param {string[]} lines
-   * @returns {{date: Date, company: string, isCancelled: boolean, quantity: number} | null}
+   * @returns {{date: Date, company: string, orderType: "D" | "F", quantity: number} | null}
    */
   mapAndValidateOrder(lines) {
-    const transaction = {
+    const order = {
       date: new Date(lines[0]),
-      company: String(lines[1]).trim(),
-      isCancelled: String(lines[2]) === "F",
+      company: String(lines[1]),
+      orderType: String(lines[2]),
       quantity: parseInt(lines[3]),
     };
 
     if (
-      isNaN(transaction.date.getTime()) ||
-      typeof transaction.company !== "string" ||
-      typeof transaction.isCancelled !== "boolean" ||
-      isNaN(transaction.quantity)
+      isNaN(order.date.getTime()) ||
+      typeof order.company !== "string" ||
+      /**
+       * D - New Order
+       * F - Cancel Order
+       */
+      (order.orderType !== "D" && order.orderType !== "F") ||
+      isNaN(order.quantity)
     ) {
       return null;
     }
 
-    return transaction;
+    return order;
   }
 }

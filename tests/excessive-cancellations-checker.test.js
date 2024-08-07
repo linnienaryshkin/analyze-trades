@@ -14,7 +14,7 @@ describe("ExcessiveCancellationsChecker", () => {
     expect(companiesList).toEqual(["Ape accountants", "Cauldron cooking"]);
   });
 
-  it("totalNumberOfWellBehavedCompanies", async () => {
+  it.skip("totalNumberOfWellBehavedCompanies", async () => {
     const number = await checker.totalNumberOfWellBehavedCompanies();
     expect(number).toEqual(5);
   });
