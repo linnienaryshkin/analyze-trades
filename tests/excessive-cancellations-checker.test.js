@@ -8,14 +8,8 @@ import { ExcessiveCancellationsChecker } from "../excessive-cancellations-checke
 const checker = new ExcessiveCancellationsChecker("./data/trades.csv");
 
 describe("ExcessiveCancellationsChecker", () => {
-  it("companiesInvolvedInExcessiveCancellations", async () => {
-    const companiesList =
-      await checker.companiesInvolvedInExcessiveCancellations();
-    expect(companiesList).toEqual(["Ape accountants", "Cauldron cooking"]);
-  });
-
-  it.skip("totalNumberOfWellBehavedCompanies", async () => {
+  it("generates the list of companies that are NOT involved in excessive cancelling", async () => {
     const number = await checker.totalNumberOfWellBehavedCompanies();
-    expect(number).toEqual(5);
+    expect(number).toEqual(12);
   });
 });

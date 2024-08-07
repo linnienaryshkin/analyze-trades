@@ -16,6 +16,29 @@ export class ExcessiveCancellationsChecker {
    * @returns {Promise<Array<string>>}
    */
   async companiesInvolvedInExcessiveCancellations() {
+    const { excessiveCancellingCompanies } = await this.analyzeCsv();
+    return Array.from(excessiveCancellingCompanies);
+  }
+
+  /**
+   * Returns the total number of companies that are not involved in any excessive cancelling.
+   * @returns {Promise<number>}
+   */
+  async totalNumberOfWellBehavedCompanies() {
+    const { companiesList, excessiveCancellingCompanies } =
+      await this.analyzeCsv();
+    return (
+      Array.from(companiesList).length -
+      Array.from(excessiveCancellingCompanies).length
+    );
+  }
+
+  /**
+   *
+   * @returns {{excessiveCancellingCompanies: Set<string>, companiesList: Set<string>}}
+   */
+  async analyzeCsv() {
+    const companiesList = new Set();
     /**
      * We use Set to store the companies that are considered to be excessively cancelling
      * Excessive Cancelling - if the company cancels more than 1/3 of the total transaction quantity
@@ -36,6 +59,8 @@ export class ExcessiveCancellationsChecker {
       if (order === null) {
         continue;
       }
+
+      companiesList.add(order.company);
 
       /**
        * If the company is already considered to be excessively cancelling,
@@ -114,19 +139,10 @@ export class ExcessiveCancellationsChecker {
       }
     }
 
-    return Array.from(excessiveCancellingCompanies);
-  }
-
-  /**
-   * Returns the total number of companies that are not involved in any excessive cancelling.
-   * @returns {Promise<number>}
-   */
-  async totalNumberOfWellBehavedCompanies() {
-    const nonExcessiveCancellingCompaniesCount = 0;
-
-    // TODO: Separate analyze method, which will be reused in both companiesInvolvedInExcessiveCancellations and totalNumberOfWellBehavedCompanies
-
-    return nonExcessiveCancellingCompaniesCount;
+    return {
+      excessiveCancellingCompanies,
+      companiesList,
+    };
   }
 
   /**
