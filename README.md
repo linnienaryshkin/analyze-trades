@@ -6,8 +6,8 @@
 
 `Time of trade message, CompanyName, Order Type - New order (D) or Cancel (F), Quantity`
 
-The lines are time ordered although **two or more lines may have the same time**.
-Company names will not contain any commas. Ignore any lines which are not properly formatted and **continue to process** the rest of the file.
+The lines are time-ordered although **two** or more lines may have the same time\*\*.
+Company names will not contain any commas. Ignore any lines that are not properly formatted and continue to process the rest of the file.
 
 ### Here are some example lines:
 
@@ -21,24 +21,24 @@ Company names will not contain any commas. Ignore any lines which are not proper
 | 2015-02-28 08:05:22 | Joe traders  | F          | 11       |
 | 2015-02-28 08:05:25 | Joe traders  | D          | 70       |
 
-If, in any given **60 second** period and for a given company, the ratio of the cumulative quantity of cancels to cumulative quantity of orders is greater than **1/3** then the company is engaged in excessive cancelling.
+If, in any given **60-second** period and for a given company, the ratio of the cumulative quantity of cancels to the cumulative quantity of orders is greater than **1/3** then the company is engaged in excessive canceling.
 
 ### Consider the above lines:
 
 - During the period 08:00:14 to 08:01:13 `Bank of Mars` made 400 new orders and cancels,
   of which 200 were cancels. This is 50% and is excessive cancelling.
-- First line `2015-02-28 07:58:14,Bank of Mars,D,140` is just one event in any 60 seconds interval, because nothing more happend at +-60 seconds.
+- First line `2015-02-28 07:58:14,Bank of Mars,D,140` is just one event in any 60-second interval because nothing more happened at +-60 seconds.
   That means that at this interval `Bank of Mars` is not engaged in excessive cancelling.
-- `Joe traders` did not engage in excessive cancelling.
+- `Joe traders` did not engage in excessive canceling.
 
 ## Your Task
 
-In the [excessive-cancellations-checker.js](excessive-cancellations-checker.js) you will find a `ExcessiveCancellationsChecker` class that must have 2 methods to be implemented:
+In the [excessive-cancellations-checker.js](excessive-cancellations-checker.js) you will find an `ExcessiveCancellationsChecker` class that must have 2 methods to be implemented:
 
-- **companiesInvolvedInExcessiveCancellations**: should return array of companies, that are engaged in excessive cancelling
-- **totalNumberOfWellBehavedCompanies**: should return a number of companies that are not engaged in excessive cancelling
+- **companiesInvolvedInExcessiveCancellations**: should return an array of companies, that are engaged in excessive canceling
+- **totalNumberOfWellBehavedCompanies**: should return a number of companies that are not engaged in excessive canceling
 
-The `ExcessiveCancellationsChecker` class accepts filepath to csv (example file is [data/trades.csv](data/trades.csv)), which you need to parse and calculate the result. You are free to add your own methods to the class, but above mentioned a **required** to be there.
+The `ExcessiveCancellationsChecker` class accepts the file path to CSV (example file is [data/trades.csv](data/trades.csv)), which you need to parse and calculate the result. You are free to add your methods to the class, but above mentioned a **required** to be there.
 
 ## Tests
 

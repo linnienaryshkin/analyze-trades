@@ -1,3 +1,5 @@
+import { createReadStream } from "node:fs";
+
 export class ExcessiveCancellationsChecker {
   /**
    * We provide a path to a file when initiating the class
@@ -20,17 +22,26 @@ export class ExcessiveCancellationsChecker {
 
     const companiesTransactions = new Map();
 
-    // TODO: Stream read the file and process it line by line
+    const readStream = createReadStream(this.filePath);
 
-    // TODO: Validate each line
+    for await (const chunk of readStream) {
+      const lines = chunk.toString().split(",");
 
-    // TODO: Define a order transaction object - { company: string, timestamp: number, total: number, cancelled: number }
+      const order = this.mapAndValidateOrder(lines);
+      if (order === null) {
+        continue;
+      }
 
-    // TODO: Handle transactions on timestamp passed 60 seconds
+      // TODO: Define an order transaction object - { company: string, timestamp: number, total: number, cancelled: number }
 
-    // TODO: Handle every transaction left transaction after end of file, via separate for loop
+      // TODO: Handle transactions on timestamp passed 60 seconds
 
-    // TODO: Ignore companies that is already in the excessiveCancellingCompanies set
+      // TODO: Handle every transaction left transaction after end of file, via separate for loop
+
+      // TODO: Ignore companies that is already in the excessiveCancellingCompanies set
+
+      console.log(order);
+    }
 
     return Array.from(excessiveCancellingCompanies);
   }
@@ -43,5 +54,29 @@ export class ExcessiveCancellationsChecker {
     const nonExcessiveCancellingCompaniesCount = 0;
 
     return nonExcessiveCancellingCompaniesCount;
+  }
+
+  /**
+   * @param {string[]} lines
+   * @returns {{date: Date, company: string, isCancelled: boolean, quantity: number} | null}
+   */
+  mapAndValidateOrder(lines) {
+    const transaction = {
+      date: new Date(lines[0]),
+      company: String(lines[1]).trim(),
+      isCancelled: String(lines[2]) === "F",
+      quantity: parseInt(lines[3]),
+    };
+
+    if (
+      isNaN(transaction.date.getTime()) ||
+      typeof transaction.company !== "string" ||
+      typeof transaction.isCancelled !== "boolean" ||
+      isNaN(transaction.quantity)
+    ) {
+      return null;
+    }
+
+    return transaction;
   }
 }
