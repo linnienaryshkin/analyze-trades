@@ -55,7 +55,3 @@ to add your own unit tests you can add these in a separate file in the `tests` f
 The [package.json](package.json) file should only be modified in order to add any third-party dependencies required for your solution. The `jest` and `babel` versions should not be changed.
 
 Your solution must use/be compatible with Node.js version `18`.
-
-##
-
-Good luck!
